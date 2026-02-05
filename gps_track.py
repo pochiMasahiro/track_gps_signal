@@ -236,7 +236,7 @@ print()
 print()
 
 LOAD_LENGTH = int(fs*500e-3)
-TOTAL_LENGTH = int(fs*10000e-3)
+TOTAL_LENGTH = int(fs*3000e-3)
 TOTAL_SAMPLES = TOTAL_LENGTH//4
 
 DP_NCO_FULL = np.iinfo(np.uint32).max
@@ -548,13 +548,13 @@ for num in range(TOTAL_LENGTH//LOAD_LENGTH):
             code_sigma = code_sigma + ki_DLL*code_error
             dc = int((code_sigma + kp_DLL*code_error))
             diff_dc = dc - prev_dc
-            if np.abs(diff_dc) > 100000:
-                if diff < 0:
-                    dc = prev_dc - 100000
+            if np.abs(diff_dc) > 1000000:
+                if diff_dc < 0:
+                    dc = prev_dc - 1000000
                 else:
-                    dc = prev_dc + 100000
+                    dc = prev_dc + 1000000
 
-            code_nco_omega = CODE_NCO_INIT + int((code_sigma + kp_DLL*code_error))
+            code_nco_omega = CODE_NCO_INIT + dc
 
             code_error_prev = code_error
             prev_in = integrator_i_punctual
