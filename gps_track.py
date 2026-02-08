@@ -244,13 +244,15 @@ doppler_nco = 0
 dp_ack_omega = int(f_doppler_candidate[max_fd_index]/fb*DP_NCO_FULL)
 doppler_omega = dp_ack_omega
 
+print(doppler_omega)
+
 localcode = np.roll(prn31, max_code_index)
 CODE_NCO_FULL = np.iinfo(np.uint32).max
 code_nco_el = CODE_NCO_FULL//2
 code_nco_punctual = 0
 
 CODE_NCO_INIT = int(fcw*(CODE_NCO_FULL+1))
-code_nco_omega = 0
+code_nco_omega = CODE_NCO_FULL//4
 code_error = 0
 code_error_prev = 0
 
@@ -272,6 +274,11 @@ track_punctual_q = np.zeros(TOTAL_SAMPLES//num_coherent_data_sample + 1)
 #track_early_q = np.zeros(samples//num_coherent_data_sample + 1)
 #track_late_i = np.zeros(samples//num_coherent_data_sample + 1)
 #track_late_q = np.zeros(samples//num_coherent_data_sample + 1)
+
+code_e = np.zeros(TOTAL_SAMPLES)
+code_p = np.zeros(TOTAL_SAMPLES)
+code_l = np.zeros(TOTAL_SAMPLES)
+code_x = np.arange(0, TOTAL_SAMPLES)
 
 code_errors = np.zeros(TOTAL_SAMPLES//num_coherent_data_sample+1)
 dp_errors = np.zeros(TOTAL_SAMPLES//num_coherent_data_sample+1)
@@ -371,7 +378,7 @@ kp_DLL_MB = kp_2hz
 ki_DLL_NB = ki_2hz
 kp_DLL_NB = kp_2hz
 
-k_code = -15000000
+k_code = -500000
 ep_code = 20
 
 ki_PLL_WB = ki_20hz
@@ -413,6 +420,8 @@ dc = 0
 prev_dc = 0
 int_df = 0
 
+data_counter = 0
+
 for num in range(TOTAL_LENGTH//LOAD_LENGTH):
     samples, i, q = readdata(FILE, LOAD_LENGTH*num, LOAD_LENGTH)
 
@@ -439,6 +448,19 @@ for num in range(TOTAL_LENGTH//LOAD_LENGTH):
         integrator_q_punctual += q_corr_punctual
         integrator_q_late += q_corr_late
 
+        code_p[data_counter] = localcode[code_phase_punctual]
+        code_e[data_counter] = localcode[code_phase_early]
+        code_l[data_counter] = localcode[code_phase_late]
+#
+#        print("Early: {}".format(localcode[code_phase_early]))
+#        print("Punctual: {}".format(localcode[code_phase_punctual]))
+#        print("Late: {}".format(localcode[code_phase_late]))
+#        print("NCO omega: {}".format(code_nco_omega))
+#        print("NCO puncutual: {}".format(code_nco_punctual))
+#        print("NCO el: {}".format(code_nco_el))
+#        print()
+#        print()
+#
         doppler_nco = (doppler_nco + doppler_omega) % DP_NCO_FULL
         code_nco_punctual = (code_nco_punctual + code_nco_omega)
         code_nco_el = (code_nco_el+code_nco_omega)
@@ -466,6 +488,7 @@ for num in range(TOTAL_LENGTH//LOAD_LENGTH):
                 code_phase_late = 0
 
         coherent_data_counter += 1
+        data_counter += 1
 
         if coherent_data_counter > (num_coherent_data_sample - 1):
             #track_late_i[index_counter] = integrator_i_late
@@ -562,7 +585,7 @@ for num in range(TOTAL_LENGTH//LOAD_LENGTH):
             prev_df = df
             prev_dc = dc
 
-            dp_errors[index_counter] = dp_pll_error #dp_error
+            dp_errors[index_counter] = dp_fll_error #dp_error
             dp_nco_omegas[index_counter] = doppler_omega
             code_errors[index_counter] = code_error
             code_nco_omegas[index_counter] = code_nco_omega
@@ -676,6 +699,18 @@ ad = fig.add_subplot(714, sharex=ax)
 ad.set_title("Code omega")
 ad.plot(code_nco_omegas[:-2])
 ad.grid(ls='--')
+
+#ce = fig.add_subplot(715)
+#ce.set_title("Code Early")
+#ce.step(code_x, code_e)
+#
+#cp = fig.add_subplot(716, sharex=ce)
+#cp.set_title("Code Punctual")
+#cp.step(code_x, code_p)
+#
+#cl = fig.add_subplot(717, sharex=ce)
+#cl.set_title("Code Late")
+#cl.step(code_x, code_l)
 
 ab = fig.add_subplot(715, sharex=ax)
 ab.set_title("Doppler Error")
