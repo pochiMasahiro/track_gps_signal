@@ -256,9 +256,9 @@ code_nco_omega = CODE_NCO_FULL//4
 code_error = 0
 code_error_prev = 0
 
-code_phase_early = 1022
+code_phase_early = 0
 code_phase_punctual = 0
-code_phase_late = 0
+code_phase_late = 1022
 
 coherent_data_counter = 0
 integrator_i_punctual = 0
@@ -378,7 +378,7 @@ kp_DLL_MB = kp_2hz
 ki_DLL_NB = ki_2hz
 kp_DLL_NB = kp_2hz
 
-k_code = -500000
+k_code = 500000
 ep_code = 20
 
 ki_PLL_WB = ki_20hz
