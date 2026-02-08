@@ -260,6 +260,12 @@ code_phase_early = 0
 code_phase_punctual = 0
 code_phase_late = 1022
 
+code_nco_pn = 0
+CODE_NCO_FULL_N = (1022 << 32) | CODE_NCO_FULL
+
+print("CODE_NCO_FULL: {}".format(CODE_NCO_FULL))
+print("CODE_NCO_FULL_N: {}".format(CODE_NCO_FULL_N))
+
 coherent_data_counter = 0
 integrator_i_punctual = 0
 integrator_q_punctual = 0
@@ -270,14 +276,14 @@ integrator_q_late = 0
 
 track_punctual_i = np.zeros(TOTAL_SAMPLES//num_coherent_data_sample + 1)
 track_punctual_q = np.zeros(TOTAL_SAMPLES//num_coherent_data_sample + 1)
-#track_early_i = np.zeros(samples//num_coherent_data_sample + 1)
-#track_early_q = np.zeros(samples//num_coherent_data_sample + 1)
-#track_late_i = np.zeros(samples//num_coherent_data_sample + 1)
-#track_late_q = np.zeros(samples//num_coherent_data_sample + 1)
 
 code_e = np.zeros(TOTAL_SAMPLES)
 code_p = np.zeros(TOTAL_SAMPLES)
 code_l = np.zeros(TOTAL_SAMPLES)
+code_en = np.zeros(TOTAL_SAMPLES)
+code_pn = np.zeros(TOTAL_SAMPLES)
+code_ln = np.zeros(TOTAL_SAMPLES)
+code_ncos = np.zeros(TOTAL_SAMPLES)
 code_x = np.arange(0, TOTAL_SAMPLES)
 
 code_errors = np.zeros(TOTAL_SAMPLES//num_coherent_data_sample+1)
@@ -341,21 +347,7 @@ kp_5hz = 0.0178
 kp_2hz = 0.00710
 kp_1hz = 0.00355
 kp_05hz = 0.00178
-#ki_WB = 0.01
-#kp_WB = 0.08
-# 20Hz by gemini
-#ki_FLL_WB = 0.0158
-#kp_FLL_WB = 0.178
 
-# 40Hz by ChatGPT
-#ki_WB = 0.0101
-#kp_WB = 0.142
-
-#ki_NB = 0.01#0.0016
-#kp_NB = 0.08#0.032
-# 10Hz by gemini
-#ki_NB = 0.00141
-#kp_NB = 0.052
 ki_FLL_WB = ki_20hz
 kp_FLL_WB = kp_20hz
 ki_FLL_MB = ki_10hz
@@ -368,7 +360,6 @@ k_fll_conf = 1
 
 ep_fll = 20
 
-#kp_fll = 0.02
 
 code_sigma = 0
 ki_DLL_WB = ki_5hz
@@ -448,59 +439,28 @@ for num in range(TOTAL_LENGTH//LOAD_LENGTH):
         integrator_q_punctual += q_corr_punctual
         integrator_q_late += q_corr_late
 
-        code_p[data_counter] = localcode[code_phase_punctual]
-        code_e[data_counter] = localcode[code_phase_early]
-        code_l[data_counter] = localcode[code_phase_late]
-#
-#        print("Early: {}".format(localcode[code_phase_early]))
-#        print("Punctual: {}".format(localcode[code_phase_punctual]))
-#        print("Late: {}".format(localcode[code_phase_late]))
-#        print("NCO omega: {}".format(code_nco_omega))
-#        print("NCO puncutual: {}".format(code_nco_punctual))
-#        print("NCO el: {}".format(code_nco_el))
-#        print()
-#        print()
-#
+        tmp_en = (code_nco_pn + CODE_NCO_FULL//4) >> 32 if (CODE_NCO_FULL_N - code_nco_pn) >= CODE_NCO_FULL//4 else (CODE_NCO_FULL_N - code_nco_pn) >> 32
+        tmp_ln = (code_nco_pn - CODE_NCO_FULL//4) >> 32 #if (code_nco_pn - CODE_NCO_FULL//4) <= 0 else (CODE_NCO_FULL_N + (code_nco_pn - CODE_NCO_FULL//4)) >> 32
+
+        code_en[data_counter] = localcode[tmp_en]
+        code_ln[data_counter] = localcode[tmp_ln]
+
+        code_phase_punctual = code_nco_pn >> 32
+        code_phase_early = tmp_en
+        code_phase_late = tmp_ln
+
         doppler_nco = (doppler_nco + doppler_omega) % DP_NCO_FULL
         code_nco_punctual = (code_nco_punctual + code_nco_omega)
         code_nco_el = (code_nco_el+code_nco_omega)
-
-        if CODE_NCO_FULL < code_nco_punctual:
-            code_nco_punctual = code_nco_punctual % CODE_NCO_FULL
-
-            if code_phase_punctual < 1022:
-                code_phase_punctual += 1
-            else:
-                code_phase_punctual = 0
-
-
-        if CODE_NCO_FULL < code_nco_el:
-            code_nco_el = code_nco_el % CODE_NCO_FULL
-
-            if code_phase_early < 1022:
-                code_phase_early += 1
-            else:
-                code_phase_early = 0
-
-            if code_phase_late < 1022:
-                code_phase_late += 1
-            else:
-                code_phase_late = 0
+        code_nco_pn = code_nco_pn + code_nco_omega
+        code_nco_pn = code_nco_pn % CODE_NCO_FULL_N
 
         coherent_data_counter += 1
         data_counter += 1
 
         if coherent_data_counter > (num_coherent_data_sample - 1):
-            #track_late_i[index_counter] = integrator_i_late
-            #track_late_q[index_counter] = integrator_q_late
-            #track_early_i[index_counter] = integrator_i_early
-            #track_early_q[index_counter] = integrator_q_early
             track_punctual_i[index_counter] = integrator_i_punctual
             track_punctual_q[index_counter] = integrator_q_punctual
-
-            #print("i_corr: {}".format(integrator_i_punctual))
-            #print("q_corr: {}".format(integrator_q_punctual))
-            #print()
 
             if mode_counter < TIME_WB:
                 ki_FLL = ki_FLL_WB
@@ -597,17 +557,8 @@ for num in range(TOTAL_LENGTH//LOAD_LENGTH):
             if incoh_counter > non_cohnum:
                 print("Elapsed time: {} ms".format(mode_counter))
                 print("Incoh integ: {}".format(incoh_integ))
-                #print("I early: {}".format(integrator_i_early))
-                #print("I late: {}".format(integrator_i_late))
-                #print("Q early: {}".format(integrator_q_early))
-                #print("Q late: {}".format(integrator_q_late))
-                #print("I punctual: {}".format(integrator_i_punctual))
-                #print("Q punctual: {}".format(integrator_q_punctual))
                 print("CODE ERR: {}".format(code_error))
                 print("CODE omega: {}".format(code_nco_omega))
-                #print("Lock mode: {}".format("FLL" if lock_pll == 0 else "Costas PLL"))
-                #print("FLL mode: {}".format("Narrow" if wb_fll == 0 else "Wide"))
-                #print("PLL mode: {}".format("Narrow" if wb_pll == 0 else "Wide"))
                 print("Mode: {}".format(mode))
                 print("ALPHA: {}".format(alpha))
                 print("DP ERR: {}".format(dp_error))
@@ -617,9 +568,6 @@ for num in range(TOTAL_LENGTH//LOAD_LENGTH):
                 print("DP omega: {}".format(doppler_omega))
                 print()
 
-                #if incoh_integ > 3e6:
-                    #wb_fll = 0
-                
                 non_cohs[non_coh_index] = incoh_integ
                 non_coh_index += 1
                 incoh_counter = 0
@@ -703,14 +651,17 @@ ad.grid(ls='--')
 #ce = fig.add_subplot(715)
 #ce.set_title("Code Early")
 #ce.step(code_x, code_e)
+#ce.step(code_x, code_en)
 #
 #cp = fig.add_subplot(716, sharex=ce)
 #cp.set_title("Code Punctual")
 #cp.step(code_x, code_p)
+#cp.step(code_x, code_pn)
 #
 #cl = fig.add_subplot(717, sharex=ce)
 #cl.set_title("Code Late")
 #cl.step(code_x, code_l)
+#cl.step(code_x, code_ln)
 
 ab = fig.add_subplot(715, sharex=ax)
 ab.set_title("Doppler Error")
