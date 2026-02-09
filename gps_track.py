@@ -372,14 +372,14 @@ kp_DLL_NB = kp_2hz
 k_code = 500000
 ep_code = 20
 
-ki_PLL_WB = ki_20hz
+ki_PLL_WB = 0#ki_20hz
 kp_PLL_WB = kp_20hz
-ki_PLL_MB = ki_20hz
+ki_PLL_MB = 0#ki_20hz
 kp_PLL_MB = kp_20hz
-ki_PLL_NB = ki_20hz
+ki_PLL_NB = 0#ki_20hz
 kp_PLL_NB = kp_20hz
 
-k_pll = 0#.001
+k_pll = -500000
 k_pll_conf = 1
 ep_pll = 10
 
@@ -393,9 +393,9 @@ ki_DLL = ki_DLL_WB
 kp_DLL = kp_DLL_WB
 
 TIME_WB = 500
-TIME_MB = 1500
-TIME_PLL = 4000
-TIME_PHADE = 5000
+TIME_MB = 1000
+TIME_PLL = 1200
+TIME_PHADE = 2200
 
 wb_fll = 1
 lock_pll = 0
@@ -410,6 +410,7 @@ prev_df = 0
 dc = 0
 prev_dc = 0
 int_df = 0
+latest_fll_f = 0
 
 data_counter = 0
 
@@ -505,14 +506,21 @@ for num in range(TOTAL_LENGTH//LOAD_LENGTH):
             # PLL error
             #dot = integrator_i_punctual**2 + integrator_q_punctual**2
             #cross = integrator_i_punctual * integrator_q_punctual
-            dp_pll_error = integrator_q_punctual * np.sign(integrator_i_punctual)*k_pll #integrator_q_punctual * integrator_i_punctual * k_pll #integrator_q_punctual/(dot+ep_pll)*k_pll
+            dp_pll_error = np.arctan2(integrator_q_punctual, integrator_i_punctual)*k_pll 
             costas_sigma = costas_sigma + ki_PLL*dp_pll_error
-            df_pll = int((costas_sigma + kp_PLL*dp_pll_error)/(2.0*np.pi)*DP_NCO_FULL*coherent_time*k_pll_conf)
+            df_pll = int((costas_sigma + kp_PLL*dp_pll_error)*k_pll_conf) #/(2.0*np.pi)*DP_NCO_FULL*coherent_time*k_pll_conf)
 
             if  mode_counter >= TIME_PLL and mode_counter < TIME_PHADE:
                 alpha -= phade_step
 
-            df = df_fll + (1-alpha)*df_pll
+            #if mode_counter >= TIME_PLL and mode_counter < TIME_PHADE:
+            #    df = alpha*df_fll + (1-alpha)*df_pll
+            if mode_counter >= TIME_PLL:
+                df = latest_fll_f + df_pll
+            else:
+                df = df_fll
+                latest_fll_f = df
+            #df = alpha*df_fll + (1-alpha)*df_pll
             #int_df = int_df + dp_error * ki
             #df = int(int_df + (kp*dp_error)) #int(alpha*df_fll + (1-alpha)*df_pll)
             diff = df-prev_df
@@ -545,7 +553,7 @@ for num in range(TOTAL_LENGTH//LOAD_LENGTH):
             prev_df = df
             prev_dc = dc
 
-            dp_errors[index_counter] = dp_fll_error #dp_error
+            dp_errors[index_counter] = dp_pll_error #dp_error
             dp_nco_omegas[index_counter] = doppler_omega
             code_errors[index_counter] = code_error
             code_nco_omegas[index_counter] = code_nco_omega
