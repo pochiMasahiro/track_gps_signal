@@ -236,7 +236,7 @@ print()
 print()
 
 LOAD_LENGTH = int(fs*500e-3)
-TOTAL_LENGTH = int(fs*3000e-3)
+TOTAL_LENGTH = int(fs*30000e-3)
 TOTAL_SAMPLES = TOTAL_LENGTH//4
 
 DP_NCO_FULL = np.iinfo(np.uint32).max
@@ -355,7 +355,7 @@ kp_FLL_MB = kp_10hz
 ki_FLL_NB = ki_5hz
 kp_FLL_NB = kp_5hz
 
-k_fll = 100000
+k_fll = 200000
 k_fll_conf = 1
 
 ep_fll = 20
@@ -369,17 +369,17 @@ kp_DLL_MB = kp_2hz
 ki_DLL_NB = ki_2hz
 kp_DLL_NB = kp_2hz
 
-k_code = 500000
+k_code = 1000000
 ep_code = 20
 
-ki_PLL_WB = 0#ki_20hz
+ki_PLL_WB = 0#ki_5hz
 kp_PLL_WB = kp_20hz
-ki_PLL_MB = 0#ki_20hz
+ki_PLL_MB = 0#ki_5hz
 kp_PLL_MB = kp_20hz
-ki_PLL_NB = 0#ki_20hz
+ki_PLL_NB = 0#ki_5hz
 kp_PLL_NB = kp_20hz
 
-k_pll = -500000
+k_pll = -3000
 k_pll_conf = 1
 ep_pll = 10
 
@@ -506,7 +506,7 @@ for num in range(TOTAL_LENGTH//LOAD_LENGTH):
             # PLL error
             #dot = integrator_i_punctual**2 + integrator_q_punctual**2
             #cross = integrator_i_punctual * integrator_q_punctual
-            dp_pll_error = np.arctan2(integrator_q_punctual, integrator_i_punctual)*k_pll 
+            dp_pll_error = integrator_q_punctual * np.sign(integrator_i_punctual)*k_pll #np.arctan2(integrator_q_punctual, integrator_i_punctual)*k_pll 
             costas_sigma = costas_sigma + ki_PLL*dp_pll_error
             df_pll = int((costas_sigma + kp_PLL*dp_pll_error)*k_pll_conf) #/(2.0*np.pi)*DP_NCO_FULL*coherent_time*k_pll_conf)
 
