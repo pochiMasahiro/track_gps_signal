@@ -238,7 +238,7 @@ print()
 print()
 
 LOAD_LENGTH = int(fs*500e-3)
-TOTAL_LENGTH = int(fs*3000e-3)
+TOTAL_LENGTH = int(fs*2000e-3)
 TOTAL_SAMPLES = TOTAL_LENGTH//4
 
 DP_NCO_FULL = np.iinfo(np.uint32).max
@@ -373,18 +373,18 @@ kp_DLL_NB = kp_2hz
 k_code = 12000000
 ep_code = 20
 
-ki_PLL_WB = 0#ki_5hz
-kp_PLL_WB = kp_20hz
-ki_PLL_MB = 0#ki_5hz
-kp_PLL_MB = kp_20hz
-ki_PLL_NB = 0#ki_5hz
-kp_PLL_NB = kp_20hz
+ki_PLL_WB = ki_10hz
+kp_PLL_WB = kp_10hz
+ki_PLL_MB = ki_10hz
+kp_PLL_MB = kp_10hz
+ki_PLL_NB = ki_10hz
+kp_PLL_NB = kp_10hz
 
-k_pll = -3000
+k_pll = +1000
 k_pll_conf = 1
 ep_pll = 10
 
-ep = 10
+ep = 1
 
 ki_FLL = ki_FLL_WB
 kp_FLL = kp_FLL_WB
@@ -394,9 +394,9 @@ ki_DLL = ki_DLL_WB
 kp_DLL = kp_DLL_WB
 
 TIME_WB = 500
-TIME_MB = 3000
-TIME_PLL = 4000
-TIME_PHADE = 5000
+TIME_MB = 750
+TIME_PLL = 1000
+TIME_PHADE = 1100
 
 wb_fll = 1
 lock_pll = 0
@@ -405,7 +405,7 @@ mode_counter = 0
 mode = "Wideband"
 
 alpha = 1
-phade_step = 0.001
+phade_step = 0.01
 df = 0
 prev_df = 0
 dc = 0
@@ -501,9 +501,9 @@ for num in range(TOTAL_LENGTH//LOAD_LENGTH):
             # PLL error
             #dot = integrator_i_punctual**2 + integrator_q_punctual**2
             #cross = integrator_i_punctual * integrator_q_punctual
-            dp_pll_error = integrator_q_punctual * np.sign(integrator_i_punctual)*k_pll #np.arctan2(integrator_q_punctual, integrator_i_punctual)*k_pll 
+            dp_pll_error = np.arctan(integrator_q_punctual/(integrator_i_punctual + ep_pll))*k_pll #integrator_q_punctual * np.sign(integrator_i_punctual)*k_pll #np.arctan2(integrator_q_punctual, integrator_i_punctual)*k_pll 
             costas_sigma = costas_sigma + ki_PLL*dp_pll_error
-            df_pll = int((costas_sigma + kp_PLL*dp_pll_error)*k_pll_conf) #/(2.0*np.pi)*DP_NCO_FULL*coherent_time*k_pll_conf)
+            df_pll = (costas_sigma + kp_PLL*dp_pll_error)*k_pll_conf #/(2.0*np.pi)*DP_NCO_FULL*coherent_time*k_pll_conf)
 
             if  mode_counter >= TIME_PLL and mode_counter < TIME_PHADE:
                 alpha -= phade_step
@@ -548,7 +548,7 @@ for num in range(TOTAL_LENGTH//LOAD_LENGTH):
             prev_df = df
             prev_dc = dc
 
-            dp_errors[index_counter] = dp_fll_error#dp_pll_error #dp_error
+            dp_errors[index_counter] = dp_pll_error#dp_pll_error #dp_error
             dp_nco_omegas[index_counter] = doppler_omega
             code_errors[index_counter] = code_error
             code_nco_omegas[index_counter] = code_nco_omega
